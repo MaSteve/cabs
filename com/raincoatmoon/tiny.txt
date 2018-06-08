@@ -1,0 +1,38 @@
+int var1;
+int var2;
+int var3;
+int var4;
+int var5;
+
+int main() {
+     int ret;
+     ret = 0;
+     int val;
+     if (ret == 0) {
+         val = 1;
+     } else {
+         val = q(2);
+     }
+     thread f(5);
+     thread q(2);
+     return ret;
+ }
+
+ int q(int aux) {
+     int ret;
+     ret = 0;
+     var5 = 10;
+     var4 = 5;
+     var3 = var4 + var5;
+     int val;
+     if (ret == 0) {
+         val = 1;
+     } else {
+         val = 2;
+     }
+     return 1;
+ }
+
+ void f(int v) {
+    var5 = v + 1;
+ }

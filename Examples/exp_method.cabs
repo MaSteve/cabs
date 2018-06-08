@@ -1,0 +1,23 @@
+# Compute a^n
+int gres;
+
+int exp(int a, int n) {
+    int res;
+    if (n < 0) {
+        res = 0;
+    } else {
+        res = 1;
+        while (n > 0) {
+            res = res * a;
+            n = n - 1;
+        }
+    }
+    return res;
+}
+
+int main() {
+    gres = exp(10, 3);
+    int pres;
+    pres = exp(10, 3);
+    return 0;
+}

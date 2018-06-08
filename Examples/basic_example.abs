@@ -1,0 +1,95 @@
+module Cabs;
+import * from ABS.StdLib;
+interface ArrayInt {
+Int getV(Int indx);
+Unit setV(Int indx, Int value);
+}
+class ArrayIntC(Int size) implements ArrayInt{
+List<Int> list = copy(0, size);
+Int getV(Int indx) {
+return nth(this.list, indx);
+}
+Unit setV(Int indx, Int value) {
+Int i = 0;
+List<Int> prev = Nil;
+List<Int> post = list;
+while (i < indx) {
+Int elem = head(post);
+prev = appendright(prev, elem);
+post = tail(post);
+i = i + 1;
+}
+prev = appendright(prev, value);
+post = tail(post);
+this.list = concatenate(prev, post);
+}
+}
+interface ArrayBool {
+Bool getV(Int indx);
+Unit setV(Int indx, Bool value);
+}
+class ArrayBoolC(Int size) implements ArrayBool{
+List<Bool> list = copy(False, size);
+Bool getV(Int indx) {
+return nth(this.list, indx);
+}
+Unit setV(Int indx, Bool value) {
+Int i = 0;
+List<Bool> prev = Nil;
+List<Bool> post = list;
+while (i < indx) {
+Bool elem = head(post);
+prev = appendright(prev, elem);
+post = tail(post);
+i = i + 1;
+}
+prev = appendright(prev, value);
+post = tail(post);
+this.list = concatenate(prev, post);
+}
+}
+interface GLOBAL {
+Int getvar();
+Unit setvar(Int val);
+Unit initialize();
+}
+class GlobalVariables() implements GLOBAL {
+Int var = 0;
+Unit initialize() {
+}
+Int getvar() {
+return var;
+}
+Unit setvar(Int val) {
+var = val;
+}
+}
+interface Intf {
+Unit f(Int value);
+}
+interface Intmain {
+Int main();
+}
+class Impf(GLOBAL globalval) implements Intf {
+Unit f(Int value) {
+await globalval!setvar(value);
+}
+}
+class Impmain(GLOBAL globalval) implements Intmain {
+Int main() {
+Intf aux_var_0 = new Impf(globalval);
+Int aux_var_1 = 1;
+aux_var_0!f(aux_var_1);
+Intf aux_var_2 = new Impf(globalval);
+Int aux_var_3 = 2;
+aux_var_2!f(aux_var_3);
+Int aux_var_4 = 0;
+return aux_var_4;
+}
+}
+{
+GLOBAL globalval = new GlobalVariables();
+await globalval!initialize();
+Intmain prog = new Impmain(globalval);
+await prog!main();
+}

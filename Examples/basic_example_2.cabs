@@ -1,0 +1,13 @@
+int var;
+int var2;
+
+int main() {
+    thread f(1);
+    thread f(2);
+    return 0;
+}
+
+void f(int value) {
+    var = value;
+    var2 = value*2;
+}

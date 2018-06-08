@@ -1,0 +1,17 @@
+int var;
+int var2;
+
+int main() {
+    thread f();
+    thread g();
+    return 0;
+}
+
+void f() {
+    var = 1;
+    var = 2;
+}
+
+void g() {
+    var2 = 10 * var + var;
+}

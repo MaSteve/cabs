@@ -1,0 +1,154 @@
+package com.raincoatmoon.Parser;
+
+import com.raincoatmoon.Nodes.*;
+import com.raincoatmoon.Application;
+import com.raincoatmoon.Manager;
+
+import java.io.FileInputStream;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.raincoatmoon.Nodes.ControlStructures.*;
+import com.raincoatmoon.Nodes.Expressions.*;
+import com.raincoatmoon.Nodes.Variables.*;
+import com.raincoatmoon.Nodes.Functions.*;
+
+parser code {:
+    public static void main(String args[]) throws Exception {
+        if (args.length == 2) {
+            Application.setFile(args[1]);
+            System.setIn(new FileInputStream(args[0]));
+            new parser(new Yylex(System.in)).parse();
+        }
+    }
+
+    public void report_error(String message, Object info) {
+
+    }
+
+    public void report_fatal_error(String message, Object info) {
+        Application.notifyError(message + " " + info);
+        //System.exit(1);
+    }
+
+    protected void report_expected_token_ids() {
+        List<Integer> ids = expected_token_ids();
+        ArrayList<String> list = new ArrayList<>();
+        for (Integer expected : ids)
+            list.add(symbl_name_from_id(expected));
+        String msg = "Los tokens esperados son: " + list;
+        Application.notifyError(msg);
+    }
+
+:}
+
+terminal Yytoken SEMI, PLUS, MINUS, TIMES, DIV, MOD, ID, ASS, EQ, NEQ, GT, GE, LT, LE, NUM;
+terminal Yytoken AND, OR, NOT, BOOL;
+terminal Yytoken RP, LP, RB, LB, RBR, LBR, COMMA;
+terminal Yytoken THREAD;
+
+non terminal ParserNode inicio, global_inst_block, inst_block, global_inst, inst, ass_inst;
+non terminal ParserNode if_inst, loop_inst, thread_inst, call_inst, return_inst, decl, func_decl, proc_decl;
+terminal Yytoken IF, ELSE, LOOP, PROC, RETURN;
+non terminal ParserNode E0, OP0, E1, OP1, E2, OP2, E3, OP3, E4;
+non terminal ParserNode VAR, ARRAY, ARRAY_LIST, STATIC_ARRAY_LIST, STATIC_ARRAY, ARG, ARG_LIST, VAR_LIST;
+terminal Yytoken TYPE;
+
+precedence left PLUS, MINUS, OR;
+precedence left TIMES, DIV, MOD, AND;
+precedence left NOT;
+
+inicio ::= global_inst_block:block {: Manager.init((GlobalBlockNode) block); :} ;
+
+global_inst_block ::= {: RESULT = new GlobalBlockNode(); :}
+                    | global_inst_block:next global_inst:inst {: RESULT = new GlobalBlockNode((Declaration) inst, (GlobalBlockNode) next); :} ;
+
+inst_block ::= {: RESULT = new BlockNode(); :}
+             | inst_block:next inst:inst {: RESULT = new BlockNode(inst, (BlockNode) next); :} ;
+inst ::= ass_inst:ass SEMI {: RESULT = ass; :}
+       | if_inst:node {: RESULT = node; :}
+       | loop_inst:node {: RESULT = node; :}
+       | decl:node SEMI {: RESULT = node; :}
+       | thread_inst:node SEMI {: RESULT = node; :}
+       | error SEMI:token {: Application.notifyError(Application.SYNTAX_MSG + " (" + token.m_line + ", " + token.m_col + ")"); :}
+       | error LB:token inst_block RB {: Application.notifyError(Application.SYNTAX_MSG + Application.UNKNOWN_BLOCK_MSG + " (" + token.m_line + ", " + token.m_col + ")"); :}
+       | LB:token error {: Application.notifyError(Application.SYNTAX_MSG + Application.UNKNOWN_BLOCK_MSG + " (" + token.m_line + ", " + token.m_col + ")"); :} ;
+
+global_inst ::= decl:node SEMI {: RESULT = node; :}
+              | func_decl:node {: RESULT = node; :}
+              | proc_decl:node {: RESULT = node; :};
+
+ass_inst ::= VAR:var ASS:token E0:exp {: RESULT = new AssNode(token, (VarReferenceNode) var, exp); :};
+E0 ::= E1:exp1 OP0:op E1:exp2 {: RESULT = new BinaryExpression(exp1, (OperatorNode) op, exp2); :}
+     | E1:exp {: RESULT = exp; :} ;
+OP0 ::= EQ:op {: RESULT = new OperatorNode(op); :}
+      | NEQ:op {: RESULT = new OperatorNode(op); :}
+      | GT:op {: RESULT = new OperatorNode(op); :}
+      | GE:op {: RESULT = new OperatorNode(op); :}
+      | LT:op {: RESULT = new OperatorNode(op); :}
+      | LE:op {: RESULT = new OperatorNode(op); :} ;
+E1 ::= E1:exp1 OP1:op E2:exp2 {: RESULT = new BinaryExpression(exp1, (OperatorNode) op, exp2); :}
+     | E2:exp {: RESULT = exp; :} ;
+OP1 ::= PLUS:op {: RESULT = new OperatorNode(op); :}
+      | MINUS:op {: RESULT = new OperatorNode(op); :}
+      | OR:op {: RESULT = new OperatorNode(op); :} ;
+E2 ::= E2:exp1 OP2:op E3:exp2 {: RESULT = new BinaryExpression(exp1, (OperatorNode) op, exp2); :}
+     | E3:exp {: RESULT = exp; :} ;
+OP2 ::= TIMES:op {: RESULT = new OperatorNode(op); :}
+      | DIV:op {: RESULT = new OperatorNode(op); :}
+      | MOD:op {: RESULT = new OperatorNode(op); :}
+      | AND:op {: RESULT = new OperatorNode(op); :} ;
+E3 ::= OP3:op E3:exp {: RESULT = new UnaryExpression((OperatorNode) op, exp); :}
+     | E4:exp {: RESULT = exp; :} ;
+OP3 ::= NOT:op {: RESULT = new OperatorNode(op); :}
+      | MINUS:op {: RESULT = new OperatorNode(op); :};
+E4 ::= VAR:var {: RESULT = var; :}
+     | NUM:num {: RESULT = new NumNode(num); :}
+     | BOOL:bool {: RESULT = new BoolNode(bool); :}
+     | LP E0:exp RP {: RESULT = exp; :}
+     | call_inst:call {: RESULT = call; :} ;
+
+VAR ::= ID:id {: RESULT = new VarReferenceNode(id); :}
+      | ID:id ARRAY_LIST:arr {: RESULT = new VarReferenceNode(id, (ArrayNode) arr); :} ;
+
+VAR_LIST ::= VAR_LIST:list COMMA E0:exp {: RESULT = new VarListNode(exp, (VarListNode) list); :}
+           | E0:exp {: RESULT = new VarListNode(exp); :};
+
+ARRAY_LIST ::= ARRAY_LIST:next ARRAY:exp {: RESULT = new ArrayNode(exp, (ArrayNode) next); :}
+             | ARRAY:exp {: RESULT = new ArrayNode(exp); :} ;
+
+ARRAY ::= LBR E1:exp RBR {: RESULT = exp; :};
+
+ARG_LIST ::= ARG_LIST:next COMMA ARG:arg {: RESULT = new ArgumentListNode((ArgumentNode) arg, (ArgumentListNode) next); :}
+           | ARG:arg {: RESULT = new ArgumentListNode((ArgumentNode) arg); :} ;
+
+ARG ::= TYPE:type ID:id STATIC_ARRAY_LIST:arr {: RESULT = new ArgumentNode(new TypeNode(type), new VarIDNode(id), (StaticArrayNode) arr); :}
+      | TYPE:type ID:id {: RESULT = new ArgumentNode(new TypeNode(type), new VarIDNode(id)); :} ;
+
+STATIC_ARRAY_LIST ::= STATIC_ARRAY_LIST:next STATIC_ARRAY:exp {: RESULT = new StaticArrayNode((NumNode) exp, (StaticArrayNode) next); :}
+                    | STATIC_ARRAY:exp {: RESULT = new StaticArrayNode((NumNode) exp); :} ;
+STATIC_ARRAY ::= LBR NUM:num RBR {: RESULT = new NumNode(num); :};
+
+
+if_inst ::= IF LP E0:cond RP LB inst_block:block RB {: RESULT = new IfNode(cond, block); :}
+          | IF LP E0:cond RP LB inst_block:block1 RB ELSE LB inst_block:block2 RB {: RESULT = new IfNode(cond, block1, block2); :} ;
+
+loop_inst ::= LOOP LP E0:cond RP LB inst_block:block RB {: RESULT = new LoopNode(cond, block); :} ;
+
+thread_inst ::= THREAD ID:id LP VAR_LIST:list RP {: RESULT = new FuncCallNode(id, (VarListNode) list, true); :}
+              | THREAD ID:id LP RP {: RESULT = new FuncCallNode(id, true); :} ;
+
+call_inst ::= ID:id LP VAR_LIST:list RP {: RESULT = new FuncCallNode(id, (VarListNode) list); :}
+            | ID:id LP RP {: RESULT = new FuncCallNode(id); :} ;
+
+return_inst ::= RETURN:tok E0:ret {: RESULT = new ReturnNode(tok, ret); :} ;
+
+func_decl ::= TYPE:type ID:id LP ARG_LIST:arg RP LB inst_block:block return_inst:ret SEMI RB {: RESULT = new FuncDeclarationNode(id, new TypeNode(type), (ArgumentListNode) arg, (BlockNode) block, (ReturnNode) ret); :}
+            | TYPE:type ID:id LP RP LB inst_block:block return_inst:ret SEMI RB {: RESULT = new FuncDeclarationNode(id, new TypeNode(type), (BlockNode) block, (ReturnNode) ret); :} ;
+
+proc_decl ::= PROC:type ID:id LP ARG_LIST:arg RP LB inst_block:block RB {: RESULT = new FuncDeclarationNode(id, new TypeNode(type), (ArgumentListNode) arg, (BlockNode) block, null); :}
+            | PROC:type ID:id LP RP LB inst_block:block RB {: RESULT = new FuncDeclarationNode(id, new TypeNode(type), (BlockNode) block, null); :} ;
+
+decl ::= TYPE:type ID:var STATIC_ARRAY_LIST:arr {: RESULT = new DeclarationNode(new TypeNode(type), new VarIDNode(var), (StaticArrayNode) arr); :}
+       | TYPE:type ID:var {: RESULT = new DeclarationNode(new TypeNode(type), new VarIDNode(var)); :} ;
+       //| TYPE:type ID:var ASS:token E0:exp {: RESULT = new DeclarationNode(new TypeNode(type), new VarIDNode(var)); :} ;

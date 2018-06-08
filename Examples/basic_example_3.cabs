@@ -1,0 +1,17 @@
+int var1;
+bool var2;
+int arr[10];
+
+int main() {
+    var1 = 10;
+    var2 = (12 == 12);
+    if ((var1 == 10) && var2) {
+        var1 = -1;
+    }
+    int localArr[10];
+    arr[5] = 666;
+    var1 = arr[5];
+    localArr[5] = 666;
+    var1 = localArr[5];
+    return 0;
+}
